@@ -1,0 +1,25 @@
+<launch>
+    <arg name="camera_name" default="daheng"/>
+    <arg name="camera_info_url" default=""/>
+    <arg name="camera_frame_id" default="camera_optical_frame"/>
+    <arg name="pixel_format" default="bgr8"/>
+    <arg name="resolution_width" default="1280"/>
+    <arg name="resolution_height" default="1024"/>
+    <arg name="frame_rate" default="210"/>
+    <arg name="auto_white_balance" default="1"/>
+    <arg name="exposure_time" default="2000"/>
+    <arg name="gain" default="10"/>
+
+    <node pkg="daheng_galaxy" type="camera_node" name="daheng_camera" output="screen">
+        <param name="camera_name" value="$(arg camera_name)"/>
+        <param name="camera_frame_id" value="$(arg camera_frame_id)"/>
+        <param name="camera_info_url" value="$(arg camera_info_url)"/>
+        <param name="resolution_width" value="$(arg resolution_width)"/>
+        <param name="resolution_height" value="$(arg resolution_height)"/>
+        <param name="pixel_format" value="$(arg pixel_format)"/>
+        <param name="frame_rate" value="$(arg frame_rate)"/>
+        <param name="exposure_time" value="$(arg exposure_time)"/>
+        <param name="auto_white_balance" value="$(arg auto_white_balance)"/>
+    </node>
+
+</launch>
