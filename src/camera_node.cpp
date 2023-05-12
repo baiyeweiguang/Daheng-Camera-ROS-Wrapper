@@ -155,8 +155,9 @@ bool DahengCameraNode::init() {
             GX_ENUM_COVER_FRAMESTORE_MODE_ON);
   GXSetFloat(m_hDevice, GX_FLOAT_ACQUISITION_FRAME_RATE, frame_rate_);
 
-  //设置曝光时间
+  //设置曝光时间与增益
   GXSetFloat(m_hDevice, GX_FLOAT_EXPOSURE_TIME, exposure_time_);
+  GXSetFloat(m_hDevice, GX_FLOAT_GAIN, gain_);
 
   //设置采集模式连续采集
   GXSetEnum(m_hDevice, GX_ENUM_ACQUISITION_MODE, GX_ACQ_MODE_CONTINUOUS);
