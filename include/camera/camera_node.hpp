@@ -27,6 +27,8 @@ class DahengCameraNode {
   void close();
   bool isOpen();
 
+  ros::Time getLatestFrameStamp() const;
+
  private:
   // Init GxDevice
   bool init();
@@ -59,6 +61,8 @@ class DahengCameraNode {
   int resolution_width_;
   int resolution_height_;
   int auto_white_balance_;
+  int offset_x_;
+  int offset_y_;
   int frame_rate_;
   int exposure_time_;
   int gain_;

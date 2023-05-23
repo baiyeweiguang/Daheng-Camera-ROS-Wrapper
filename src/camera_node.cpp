@@ -14,12 +14,15 @@ DahengCameraNode::DahengCameraNode() : it_(nh_) {
   nh_.param("/resolution_width", resolution_width_, 1280);
   nh_.param("/resolution_height", resolution_height_, 1024);
   nh_.param("/auto_white_balance", auto_white_balance_, 1);
+  nh_.param("/offset_x", offset_x_, 0);
+  nh_.param("/offset_y", offset_y_, 0);
   nh_.param("/frame_rate", frame_rate_, 210);
   nh_.param("/exposure_time", exposure_time_, 2000);
   nh_.param("/gain", gain_, 5);
 
   //为存储原始图像数据申请空间
   image_msg_.header.frame_id = frame_id_;
+  image_msg_.header.stamp = ros::Time::now();
   image_msg_.encoding = pixel_format_;
   image_msg_.height = resolution_height_;
   image_msg_.width = resolution_width_;
@@ -72,6 +75,10 @@ DahengCameraNode::~DahengCameraNode() {
   }
 }
 
+ros::Time DahengCameraNode::getLatestFrameStamp() const {
+  return image_msg_.header.stamp;
+}
+
 void DahengCameraNode::open() {
   // Init Daheng Galaxy Camera Device
   ROS_INFO("Try to open camera");
@@ -86,9 +93,9 @@ void DahengCameraNode::open() {
 void DahengCameraNode::close() {
   printf("Try to close camera\n");
   if (is_open_) {
-    //发送停采命令
+    // Stream off
     GXStreamOff(m_hDevice);
-    //注销采集回调
+    // Unregister callback and close device
     GXUnregisterCaptureCallback(m_hDevice);
     GXCloseDevice(m_hDevice);
     GXCloseLib();
@@ -101,72 +108,69 @@ bool DahengCameraNode::isOpen() {
 }
 
 bool DahengCameraNode::init() {
-  emStatus = GX_STATUS_SUCCESS;
   GX_OPEN_PARAM openParam;
   uint32_t nDeviceNum = 0;
   openParam.accessMode = GX_ACCESS_EXCLUSIVE;
   openParam.openMode = GX_OPEN_INDEX;
   openParam.pszContent = (char*)"1";
-  // 初始化库
+  //  Init lib
   emStatus = GXInitLib();
   if (emStatus != GX_STATUS_SUCCESS) {
     ROS_ERROR("Can't init lib");
     return false;
   }
-  // 枚举设备列表
+  // Find device
   emStatus = GXUpdateDeviceList(&nDeviceNum, 1000);
   if ((emStatus != GX_STATUS_SUCCESS) || (nDeviceNum <= 0)) {
     ROS_ERROR("Can't find camera");
     return false;
   }
   ROS_INFO("Camera found");
-  //打开设备
+  // Open device
   emStatus = GXOpenDevice(&openParam, &m_hDevice);
   if (emStatus != GX_STATUS_SUCCESS) {
     ROS_ERROR("Camera Open Failed");
     return false;
   }
-  // 设置像素格式
+  // Set pixel format
   GXSetEnum(m_hDevice, GX_ENUM_PIXEL_FORMAT, m_nPixelformat);
-  // 设置宽度
+  // Set resolution
   GXSetInt(m_hDevice, GX_INT_WIDTH, resolution_width_);
-  // 设置高度
   GXSetInt(m_hDevice, GX_INT_HEIGHT, resolution_height_);
 
-  // 从中心裁剪
-  int64_t nOffsetX = (MAX_RESOLUTION_WIDTH - resolution_width_) / 2;
-  int64_t nOffsetY = (MAX_RESOLUTION_HEIGHT - resolution_height_) / 2;
+  // Set offset
+  // int64_t nOffsetX = (MAX_RESOLUTION_WIDTH - resolution_width_) / 2;
+  // int64_t nOffsetY = (MAX_RESOLUTION_HEIGHT - resolution_height_) / 2;
   //  GXSetEnum(m_hDevice, GX_ENUM_RREGION_SELECTOR, GX_REGION_SELECTOR_REGION0);
-  GXSetInt(m_hDevice, GX_INT_OFFSET_X, nOffsetX);
-  GXSetInt(m_hDevice, GX_INT_OFFSET_Y, nOffsetY);
+  GXSetInt(m_hDevice, GX_INT_OFFSET_X, offset_x_);
+  GXSetInt(m_hDevice, GX_INT_OFFSET_Y, offset_y_);
 
-  // 获取图像大小
+  // Get payload size
   GXGetInt(m_hDevice, GX_INT_PAYLOAD_SIZE, &m_nPayLoadSize);
-  //设置是否开启自动白平衡
+  // Set white balance
   if (auto_white_balance_) {
     GXSetEnum(m_hDevice, GX_ENUM_BALANCE_WHITE_AUTO, 1);
   } else {
-    //设置白平衡数值  如果开启自动白平衡则无效
     GXSetEnum(m_hDevice, GX_ENUM_LIGHT_SOURCE_PRESET,
               GX_LIGHT_SOURCE_PRESET_DAYLIGHT_5000K);
   }
-  //设置帧率
+  // Set frame rate
   GXSetEnum(m_hDevice, GX_ENUM_ACQUISITION_FRAME_RATE_MODE,
             GX_ENUM_COVER_FRAMESTORE_MODE_ON);
   GXSetFloat(m_hDevice, GX_FLOAT_ACQUISITION_FRAME_RATE, frame_rate_);
 
-  //设置曝光时间与增益
+  // Set exposure time and gain
   GXSetFloat(m_hDevice, GX_FLOAT_EXPOSURE_TIME, exposure_time_);
   GXSetFloat(m_hDevice, GX_FLOAT_GAIN, gain_);
 
-  //设置采集模式连续采集
+  // Set trigger mode, continuous acquisition
   GXSetEnum(m_hDevice, GX_ENUM_ACQUISITION_MODE, GX_ACQ_MODE_CONTINUOUS);
   GXSetInt(m_hDevice, GX_INT_ACQUISITION_SPEED_LEVEL, 1);
 
-  //注册图像处理回调函数
+  // Register callback
   GXRegisterCaptureCallback(m_hDevice, nullptr, onFrameCallbackFun);
 
-  //发送开采命令
+  // Stream on
   GXStreamOn(m_hDevice);
 
   return true;
